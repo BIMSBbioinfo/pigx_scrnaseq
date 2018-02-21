@@ -194,9 +194,6 @@ rule link_primary_annotation:
     output:
         gtf   = LINK_GTF_PRIMARY,
         fasta = LINK_REFERENCE_PRIMARY,
-    params:
-        threads=1,
-        mem='4G'
     message:
         """
             Linking primary reference files:
@@ -223,8 +220,6 @@ if GENOME_SECONDARY_IND:
         output:
             outfile = PATH_REFERENCE_MIX
         params:
-            threads=1,
-            mem='4G',
             genome_name_primary   = GENOME_NAME_PRIMARY,
             genome_name_secondary = GENOME_NAME_SECONDARY
         message:
@@ -248,10 +243,9 @@ rule make_star_reference:
     output:
         outfile = os.path.join(PATH_ANNOTATION, '{genome}','STAR_INDEX','done.txt')
     params:
+        threads = config['execution']['rules']['make_star_reference'],
         outdir  = os.path.join(PATH_ANNOTATION, '{genome}','STAR_INDEX'),
         star    = SOFTWARE['star']['executable'],
-        threads = 8,
-        mem     = '40G'
     log:
         os.path.join(PATH_LOG, '{genome}.make_star_reference.log')
     message:"""
@@ -275,8 +269,6 @@ if GENOME_SECONDARY_IND:
         output:
             outfile = PATH_GTF_MIX
         params:
-            threads=1,
-            mem='4G',
             genome_name_primary   = GENOME_NAME_PRIMARY,
             genome_name_secondary = GENOME_NAME_SECONDARY
         message:
@@ -299,10 +291,9 @@ rule fasta_dict:
     output:
         os.path.join(PATH_ANNOTATION, '{genome}', '{genome}.dict')
     params:
+        threads = config['execution']['rules']['fasta_dict'],
         picard  = SOFTWARE['picard']['executable'],
         java    = SOFTWARE['java']['executable'],
-        threads = 1,
-        mem     = '2G',
         tempdir = TEMPDIR
     log:
         os.path.join(PATH_LOG, '{genome}.fasta_dict.log')
@@ -325,8 +316,6 @@ rule change_gtf_id:
     output:
         outfile = os.path.join(PATH_ANNOTATION, '{genome}', '{genome}.gene_id.gtf')
     params:
-        threads = 1,
-        mem     = '4G',
         script  = PATH_SCRIPT,
         Rscript = PATH_RSCRIPT
     message:
@@ -347,8 +336,7 @@ rule gtf_to_refflat:
     output:
         os.path.join(PATH_ANNOTATION, '{genome}', '{genome}.refFlat')
     params:
-        threads   = 1,
-        mem       = '30G',
+        threads = config['execution']['rules']['gtf_to_refflat'],
         java      = SOFTWARE['java']['executable'] ,
         droptools = SOFTWARE['droptools']['executable'],
         tempdir   = TEMPDIR
@@ -379,11 +367,10 @@ rule merge_fastq_to_bam:
     output:
         outfile = os.path.join(PATH_MAPPED, "{name}", "{name}.fastq.bam")
     params:
+        threads = config['execution']['rules']['merge_fastq_to_bam'],
         name    = '{name}',
         picard  = SOFTWARE['picard']['executable'],
         java    = SOFTWARE['java']['executable'],
-        threads = 1,
-        mem     = '2G',
         tempdir = TEMPDIR
     log:
         os.path.join(PATH_LOG, '{name}.merge_fastq_to_bam.log')
@@ -404,12 +391,11 @@ rule tag_cells:
     output:
         outfile   = temp(os.path.join(PATH_MAPPED, "{name}", "{genome}","unaligned_tagged_Cell.bam"))
     params:
+        threads = config['execution']['rules']['merge_fastq_to_bam'],
         summary   = os.path.join(PATH_MAPPED, "{name}", "{genome}","unaligned_tagged_Cellular.bam_summary.txt"),
         droptools = SOFTWARE['droptools']['executable'],
         java      = SOFTWARE['java']['executable'],
         app_name  = 'TagBamWithReadSequenceExtended',
-        threads   = 8,
-        mem       = '35G',
         tempdir   = TEMPDIR,
         base_min  = 1,
         base_max  = 12,
@@ -443,12 +429,11 @@ rule tag_molecules:
     output:
         outfile   = temp(os.path.join(PATH_MAPPED, "{name}", "{genome}","unaligned_tagged_CellMolecular.bam"))
     params:
+        threads = config['execution']['rules']['tag_molecules'],
         summary   = os.path.join(PATH_MAPPED, "{name}", "{genome}","unaligned_tagged_Molecular.bam_summary.txt"),
         droptools = SOFTWARE['droptools']['executable'],
         java      = SOFTWARE['java']['executable'],
         app_name  = 'TagBamWithReadSequenceExtended',
-        threads   = 8,
-        mem       = '35G',
         tempdir   = TEMPDIR,
         base_min  = 13,
         base_max  = 20,
@@ -483,11 +468,10 @@ rule filter_bam:
     output:
         outfile   = temp(os.path.join(PATH_MAPPED, "{name}", "{genome}","unaligned_tagged_filtered.bam"))
     params:
+        threads = config['execution']['rules']['filter_bam'],
         droptools = SOFTWARE['droptools']['executable'],
         java      = SOFTWARE['java']['executable'],
         app_name  = 'FilterBAM',
-        threads   = 1,
-        mem       = '10G',
         tempdir   = TEMPDIR,
     log:
        log = os.path.join(PATH_LOG, "{name}.{genome}.filter_bam.log")
@@ -510,11 +494,10 @@ rule trim_starting_sequence:
     output:
         outfile = temp(os.path.join(PATH_MAPPED, "{name}", "{genome}","unaligned_tagged_trimmed_smart.bam"))
     params:
+        threads = config['execution']['rules']['trim_starting_sequence'],
         droptools  = SOFTWARE['droptools']['executable'],
         java       = SOFTWARE['java']['executable'],
         app_name   = 'TrimStartingSequence',
-        threads    = 1,
-        mem        = '10G',
         tempdir    = TEMPDIR,
         summary    = os.path.join(PATH_MAPPED, "{name}", "{genome}","adapter_trimming_report.txt"),
         mismatches = 1,
@@ -544,11 +527,10 @@ rule trim_polya:
     output:
         outfile   = temp(os.path.join(PATH_MAPPED, "{name}", "{genome}","unaligned_mc_tagged_polyA_filtered.bam"))
     params:
+        threads = config['execution']['rules']['trim_polya'],
         droptools  = SOFTWARE['droptools']['executable'],
         java       = SOFTWARE['java']['executable'],
         app_name   = 'PolyATrimmer',
-        threads    = 1,
-        mem        = '10G',
         tempdir    = TEMPDIR,
         summary    = os.path.join(PATH_MAPPED, "{name}", "{genome}","polyA_trimming_report.txt"),
         mismatches = 0,
@@ -575,11 +557,10 @@ rule sam_to_fastq:
     output:
         outfile   = temp(os.path.join(PATH_MAPPED, "{name}", "{genome}","unaligned_mc_tagged_polyA_filtered.fastq"))
     params:
+        threads = config['execution']['rules']['sam_to_fastq'],
         picard     = SOFTWARE['picard']['executable'],
         java       = SOFTWARE['java']['executable'],
         app_name   = 'SamToFastq',
-        threads    = 1,
-        mem        = '10G',
         tempdir    = TEMPDIR
     log:
        log = os.path.join(PATH_LOG, "{name}.{genome}.SamToFastq.log")
@@ -602,11 +583,10 @@ rule map_star:
     output:
         outfile   = temp(os.path.join(PATH_MAPPED, "{name}", "{genome}","star.Aligned.out.sam"))
     params:
+        threads = config['execution']['rules']['map_star'],
         star       = SOFTWARE['star']['executable'],
         genome     = os.path.join(PATH_ANNOTATION, '{genome}','STAR_INDEX'),
         outpath    = os.path.join(PATH_MAPPED, "{name}", "{genome}"),
-        threads    = 4,
-        mem        = '32G',
         tempdir    = TEMPDIR,
     log:
        log = os.path.join(PATH_LOG, "{name}.{genome}.star.log")
@@ -622,11 +602,10 @@ rule sort_aligned:
     output:
         outfile   = temp(os.path.join(PATH_MAPPED, "{name}", "{genome}","aligned.sorted.bam"))
     params:
+        threads = config['execution']['rules']['sort_aligned'],
         picard     = SOFTWARE['picard']['executable'],
         java       = SOFTWARE['java']['executable'],
         app_name   = 'SortSam',
-        threads    = 1,
-        mem        = '5G',
         tempdir    = TEMPDIR
     log:
        log = os.path.join(PATH_LOG, "{name}.{genome}.sort_aligned.log")
@@ -653,11 +632,10 @@ rule merge_bam:
     output:
         outfile   = temp(os.path.join(PATH_MAPPED, "{name}", "{genome}","merged.bam"))
     params:
+        threads = config['execution']['rules']['merge_bam'],
         picard     = SOFTWARE['picard']['executable'],
         java       = SOFTWARE['java']['executable'],
         app_name   = 'MergeBamAlignment',
-        threads    = 1,
-        mem        = '5G',
         tempdir    = TEMPDIR
     log:
        log = os.path.join(PATH_LOG, "{name}.{genome}.merge_bam.log")
@@ -684,11 +662,10 @@ rule tag_with_gene_exon:
     output:
         outfile   = os.path.join(PATH_MAPPED, "{name}", "{genome}","star_gene_exon_tagged.bam")
     params:
+        threads = config['execution']['rules']['tag_with_gene_exon'],
         droptools  = SOFTWARE['droptools']['executable'],
         java       = SOFTWARE['java']['executable'],
         app_name   = 'TagReadWithGeneExon',
-        threads    = 1,
-        mem        = '5G',
         tempdir    = TEMPDIR
     log:
        log = os.path.join(PATH_LOG, "{name}.{genome}.tag_with_gene_exon.log")
@@ -716,8 +693,6 @@ rule extract_read_statistics:
         outfile = os.path.join(PATH_MAPPED, "{name}", "{genome}",'{name}_{genome}_ReadStatistics.txt')
     params:
         outname  = "{name}_{genome}",
-        threads  = 1,
-        mem      = '8G',
         script   = PATH_SCRIPT,
         Rscript  = PATH_RSCRIPT
     message: """
@@ -739,10 +714,9 @@ rule bam_tag_histogram:
     output:
         outfile = os.path.join(PATH_MAPPED, "{name}", "{genome}",'{name}_{genome}_BAMTagHistogram.txt')
     params:
+        threads = config['execution']['rules']['bam_tag_histogram'],
         outdir    = os.path.join(PATH_MAPPED, "{name}", "{genome}"),
         outname   = "{name}_{genome}",
-        threads   = 1,
-        mem       = '64G',
         java      = SOFTWARE['java']['executable'],
         droptools = SOFTWARE['droptools']['executable'],
         tempdir   = TEMPDIR
@@ -766,8 +740,6 @@ rule find_absolute_read_cutoff:
     params:
         outdir   = os.path.join(PATH_MAPPED, "{name}", "{genome}"),
         outname  = "{name}_{genome}",
-        threads  = 1,
-        mem      = '8G',
         cutoff   = 50000,
         script   = PATH_SCRIPT,
         Rscript  = PATH_RSCRIPT
@@ -789,10 +761,9 @@ rule get_umi_matrix:
     output:
         outfile = os.path.join(PATH_MAPPED, "{name}", "{genome}",'{name}_{genome}_UMI.Matrix.txt')
     params:
+        threads = config['execution']['rules']['get_umi_matrix'],
         outdir            = os.path.join(PATH_MAPPED, "{name}", "{genome}"),
         outname           = "{name}_{genome}",
-        threads           = 1,
-        mem               = '8G',
         java              = SOFTWARE['java']['executable'] ,
         droptools         = SOFTWARE['droptools']['executable'],
         app_name          = 'DigitalExpression',
@@ -831,14 +802,13 @@ rule get_reads_matrix:
     output:
         outfile = os.path.join(PATH_MAPPED, "{name}", "{genome}",'{name}_{genome}_READS.Matrix.txt')
     params:
+        threads = config['execution']['rules']['get_reads_matrix'],
         outdir            = os.path.join(PATH_MAPPED, "{name}", "{genome}"),
         outname           = "{name}_{genome}",
         java              = SOFTWARE['java']['executable'] ,
         droptools         = SOFTWARE['droptools']['executable'],
         app_name          = 'DigitalExpression',
         tempdir           = TEMPDIR,
-        threads           = 1,
-        mem               = '8G'
     message: """
             Count UMI:
                 input:  {input.infile}
@@ -873,8 +843,6 @@ rule extract_downstream_statistics:
     params:
         file_location = os.path.join(PATH_MAPPED, "{name}", "{genome}"),
         outname       = "{name}_{genome}",
-        threads       = 1,
-        mem           = '8G',
         scriptdir     = PATH_SCRIPT,
         Rscript       = PATH_RSCRIPT
     message: """
@@ -973,8 +941,6 @@ rule bam_to_BigWig:
     output:
         bwfile = os.path.join(PATH_MAPPED, "{name}", "{genome}",'{name}_{genome}.bw')
     params:
-        threads = 1,
-        mem     = '16G',
         script  = PATH_SCRIPT,
         Rscript = PATH_RSCRIPT
     message: """
@@ -993,9 +959,8 @@ rule fastqc:
     output:
         outfile = os.path.join(PATH_MAPPED, "{name}", "{name}.fastqc.done")
     params:
+        threads = config['execution']['rules']['fastqc'],
         outpath = os.path.join(PATH_MAPPED, "{name}"),
-        threads = 1,
-        mem     = '16G',
         java    = SOFTWARE['java']['executable']
     log:
         log = os.path.join(PATH_LOG, "{name}.fastqc.log")
@@ -1009,3 +974,4 @@ rule fastqc:
         fastqc -j {params.java} -t {params.threads} -o {params.outpath} {input.barcode} {input.reads} 2> {log.log}
         touch {output.outfile}
     """
+
