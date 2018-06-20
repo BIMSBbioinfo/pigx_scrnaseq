@@ -86,6 +86,7 @@ for method in set(SAMPLE_SHEET.list_attr('method')):
 
 # ----------------------------------------------------------------------------- #
 # Tags for genes and exons used in get_umi_matrix
+# the keys will be used for gtf parsing
 tags = {'gene': 'ZI', 'exon': 'GE'}
 
 # ----------------------------------------------------------------------------- #
@@ -99,15 +100,22 @@ if TEMPDIR == None:
 # ----------------------------------------------------------------------------- #
 # RULES
 
-# ----------------------------------------------------------------------------- #
-# Create genes GTF
-PATH_GENES_GTF   = os.path.join(PATH_ANNOTATION_PRIMARY, GENOME_NAME_PRIMARY + '.genes.gene_id.gtf')
 
 # ----------------------------------------------------------------------------- #
 # Link primary reference
 # TODO : make extension dynamic (to accept both fasta and fasta.gz files)
 LINK_REFERENCE_PRIMARY   = os.path.join(PATH_ANNOTATION_PRIMARY,  GENOME_NAME_PRIMARY + '.fasta')
 LINK_GTF_PRIMARY         = os.path.join(PATH_ANNOTATION_PRIMARY, GENOME_NAME_PRIMARY + '.gtf')
+
+
+
+# ----------------------------------------------------------------------------- #
+# Change reference gene_name to gene_id
+PATH_GTF_PRIMARY_ID = expand(os.path.join(PATH_ANNOTATION_PRIMARY, "{name}.exon.gene_id.gtf"), name = REFERENCE_NAMES)
+
+# ----------------------------------------------------------------------------- #
+# Create genes GTF
+PATH_GENES_GTF   = os.path.join(PATH_ANNOTATION_PRIMARY, GENOME_NAME_PRIMARY + '.gene.gene_id.gtf')
 
 # ----------------------------------------------------------------------------- #
 # Combine primary and secondary reference genomes
@@ -121,7 +129,9 @@ if GENOME_SECONDARY_IND:
 
 # ----------------------------------------------------------------------------- #
 # REFFLAT and DICT
-REFFLAT = expand(os.path.join(PATH_ANNOTATION_PRIMARY, GENOME_NAME_PRIMARY + '.{type}.refFlat'), type = ['genes', 'exon'])
+REFFLAT = expand(os.path.join(PATH_ANNOTATION_PRIMARY, GENOME_NAME_PRIMARY + '.{type}.refFlat'), type = tags.keys())
+
+
 DICT    = [os.path.join(PATH_ANNOTATION_PRIMARY, GENOME_NAME_PRIMARY + '.dict')]
 
 if GENOME_SECONDARY_IND: ## THIS ?
@@ -132,9 +142,6 @@ if GENOME_SECONDARY_IND: ## THIS ?
 # ----------------------------------------------------------------------------- # FastQC
 FASTQC = expand(os.path.join(PATH_MAPPED, "{name}", "{name}.fastqc.done"), name=SAMPLE_NAMES)
 
-# ----------------------------------------------------------------------------- #
-# Change reference gene_name to gene_id
-PATH_GTF_PRIMARY_ID = expand(os.path.join(PATH_ANNOTATION_PRIMARY, "{name}.exon.gene_id.gtf"), name=REFERENCE_NAMES)
 
 # ----------------------------------------------------------------------------- #
 # STAR INDEX
@@ -231,7 +238,7 @@ rule combine_technical_replicates:
         import os
         import magic as mg
         import gzip
-        for attr in ['reads', 'barcode']:            
+        for attr in ['reads', 'barcode']:
             out_file = str(output[attr])
             # remove gz from out file if it's there
             if '.gz' in out_file:
@@ -416,6 +423,8 @@ rule change_gtf_id:
         mem     = config['execution']['rules']['change_gtf_id']['memory'],
         script  = PATH_SCRIPT,
         Rscript = PATH_RSCRIPT
+    log:
+        log = os.path.join(PATH_LOG, '{genome}.change_gtf_id.log')
     message:
         """
             Changing GTF id:
@@ -428,22 +437,24 @@ rule change_gtf_id:
 # ----------------------------------------------------------------------------- #
 # Create genes gtf and save to Annotation folder
 rule create_genes_gtf:
-	input:
-		infile = rules.change_gtf_id.output.outfile
-	output:
-		outfile = os.path.join(PATH_ANNOTATION, '{genome}','{genome}.genes.gene_id.gtf')
-	params:
-		threads  = config['execution']['rules']['extract_read_statistics']['threads'],
+    input:
+        infile = rules.change_gtf_id.output.outfile
+    output:
+        outfile = os.path.join(PATH_ANNOTATION, '{genome}','{genome}.gene.gene_id.gtf')
+    params:
+        threads  = config['execution']['rules']['extract_read_statistics']['threads'],
         mem      = config['execution']['rules']['extract_read_statistics']['memory'],
-		Rscript = PATH_RSCRIPT,
-		Script = PATH_SCRIPT
-	message: """
-			Extracting genes from GTF:
-				input  : {input}
-				output : {output}
-		"""
-	run:
-		RunRscript(input, output, params, params.Script, 'get_GTF_genes.R')
+        Rscript  = PATH_RSCRIPT,
+        script   = PATH_SCRIPT
+    log:
+        log = os.path.join(PATH_LOG, '{genome}.create_genes_gtf.log')
+    message: """
+            Extracting genes from GTF:
+                input  : {input}
+                output : {output}
+        """
+    run:
+        RunRscript(input, output, params, params.script, 'get_GTF_genes.R')
 
 # ----------------------------------------------------------------------------- #
 rule gtf_to_refflat:
@@ -504,7 +515,7 @@ rule merge_fastq_to_bam:
                     reads   : {input.reads}
                 output : {output}
         """
-    run:    
+    run:
         tool = java_tool(params.java, params.threads, params.mem, params.tempdir, params.picard, params.app_name)
 
         command = ' '.join([
@@ -540,7 +551,7 @@ rule tag_cells:
        log = os.path.join(PATH_LOG, "{name}.{genome}.tag_cells.log")
     run:
         tool = java_tool(params.java, params.threads, params.mem, params.tempdir, params.droptools, params.app_name)
-        
+
         # fetches method from the sample_sheet
         method = SAMPLE_SHEET.lookup('sample_name', params.name, ['method'])[0]
         adapter_params = ADAPTER_PARAMETERS[method]['cell_barcode']
@@ -833,7 +844,7 @@ rule tag_with_gene_exon:
 rule tag_with_gene:
     input:
         infile    = rules.tag_with_gene_exon.output.outfile,
-        refflat   = os.path.join(PATH_ANNOTATION, '{genome}', '{genome}.genes.refFlat')
+        refflat   = os.path.join(PATH_ANNOTATION, '{genome}', '{genome}.gene.refFlat')
     output:
         outfile   = os.path.join(PATH_MAPPED, "{name}", "{genome}","star_tagged_final.bam")
     params:
@@ -970,8 +981,8 @@ rule get_umi_matrix:
 
         command1 = ' '.join([
         tool,
-        'O=' + str(output.outfile_exon),
-        'I=' + str(input.infile_exon),
+        'O=' + str(output.outfile),
+        'I=' + str(input.infile),
         'GENE_EXON_TAG=' + str(params.tag),
         'SUMMARY=' + os.path.join(params.outdir, params.outname + '_Summary.txt'),
         'MIN_NUM_READS_PER_CELL=' + str(reads_cutoff),
