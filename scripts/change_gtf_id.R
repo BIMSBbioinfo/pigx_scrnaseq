@@ -16,6 +16,7 @@ change_gtf_id = function(
   g = import.gff2(infile)
   g$gene_name = g$gene_id
   g$transcript_name = g$transcript_id
+  message(head(g))
   export.gff2(g, outfile)
 }
 
