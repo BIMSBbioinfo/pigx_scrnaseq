@@ -153,8 +153,9 @@ MERGE_FASTQ_TO_BAM = expand(os.path.join(PATH_MAPPED, "{name}", "{name}" + '.fas
 
 # ----------------------------------------------------------------------------- #
 # MAPPING
-MAP_scRNA = expand(os.path.join(PATH_MAPPED, "{name}", "{genome}", "star_gene_exon_tagged.bam"), genome = REFERENCE_NAMES, name = SAMPLE_NAMES)
+MAP_exon = expand(os.path.join(PATH_MAPPED, "{name}", "{genome}", "star_exon_tagged.bam"), genome = REFERENCE_NAMES, name = SAMPLE_NAMES)
 
+MAP_gene = expand(os.path.join(PATH_MAPPED, "{name}", "{genome}", "star_gene_tagged.bam"), genome = REFERENCE_NAMES, name = SAMPLE_NAMES)
 
 # ----------------------------------------------------------------------------- #
 # Number of reads per cell calculation
@@ -211,7 +212,7 @@ RULE_ALL = RULE_ALL + [PATH_GENES_GTF, LINK_REFERENCE_PRIMARY, LINK_GTF_PRIMARY]
 if len(COMBINE_REFERENCE) > 0:
     RULE_ALL = RULE_ALL + COMBINE_REFERENCE
 
-RULE_ALL = RULE_ALL + DICT + REFFLAT + MAKE_STAR_INDEX + FASTQC + MERGE_FASTQ_TO_BAM + MAP_scRNA + BAM_HISTOGRAM + FIND_READ_CUTOFF + READS_MATRIX + UMI + READ_STATISTICS  + BIGWIG + UMI_LOOM + COMBINED_UMI_MATRICES + SCE_RDS_FILES + REPORT_FILES + COLLAPSED_REPLICATES + PATH_GTF_PRIMARY_ID
+RULE_ALL = RULE_ALL + DICT + REFFLAT + MAKE_STAR_INDEX + FASTQC + MERGE_FASTQ_TO_BAM + MAP_exon + MAP_gene + BAM_HISTOGRAM + FIND_READ_CUTOFF + READS_MATRIX + UMI + READ_STATISTICS  + BIGWIG + UMI_LOOM + COMBINED_UMI_MATRICES + SCE_RDS_FILES + REPORT_FILES + COLLAPSED_REPLICATES + PATH_GTF_PRIMARY_ID
 
 # ----------------------------------------------------------------------------- #
 rule all:
@@ -817,7 +818,7 @@ rule tag_with_gene_exon:
         infile    = rules.merge_bam.output.outfile,
         refflat   = os.path.join(PATH_ANNOTATION, '{genome}', '{genome}.exon.refFlat')
     output:
-        outfile   = os.path.join(PATH_MAPPED, "{name}", "{genome}","star_gene_exon_tagged.bam")
+        outfile   = os.path.join(PATH_MAPPED, "{name}", "{genome}","star_exon_tagged.bam")
     params:
         droptools  = SOFTWARE['droptools']['executable'],
         java       = SOFTWARE['java']['executable'],
@@ -843,10 +844,10 @@ rule tag_with_gene_exon:
 # ----------------------------------------------------------------------------- #
 rule tag_with_gene:
     input:
-        infile    = rules.tag_with_gene_exon.output.outfile,
+        infile    = rules.merge_bam.output.outfile,
         refflat   = os.path.join(PATH_ANNOTATION, '{genome}', '{genome}.gene.refFlat')
     output:
-        outfile   = os.path.join(PATH_MAPPED, "{name}", "{genome}","star_tagged_final.bam")
+        outfile   = os.path.join(PATH_MAPPED, "{name}", "{genome}","star_gene_tagged.bam")
     params:
         droptools  = SOFTWARE['droptools']['executable'],
         java       = SOFTWARE['java']['executable'],
@@ -951,7 +952,7 @@ rule find_absolute_read_cutoff:
 # calculates the UMI matrix
 rule get_umi_matrix:
     input:
-        infile  = rules.tag_with_gene.output,
+        infile  = os.path.join(PATH_MAPPED, "{name}", "{genome}","star_{type}_tagged.bam"),
         reads_cutoff  = rules.find_absolute_read_cutoff.output.outfile
     output:
         outfile = os.path.join(PATH_MAPPED, "{name}", "{genome}",'{name}_{genome}_{type}_UMI.Matrix.txt')
@@ -979,7 +980,7 @@ rule get_umi_matrix:
 
         tool = java_tool(params.java, params.threads, params.mem, params.tempdir, params.droptools, params.app_name)
 
-        command1 = ' '.join([
+        command = ' '.join([
         tool,
         'O=' + str(output.outfile),
         'I=' + str(input.infile),
@@ -988,6 +989,7 @@ rule get_umi_matrix:
         'MIN_NUM_READS_PER_CELL=' + str(reads_cutoff),
         'OUTPUT_READS_INSTEAD=F'
         ])
+        shell(command)
 
 
 # ----------------------------------------------------------------------------- #
@@ -1024,6 +1026,7 @@ rule get_reads_matrix:
         'O=' + str(output.outfile),
         'I=' + str(input.infile),
         'SUMMARY=' + os.path.join(params.outdir, params.outname + '_Summary.txt'),
+        'GENE_EXON_TAG=ZI', 
         'MIN_NUM_READS_PER_CELL=' + str(reads_cutoff),
         'OUTPUT_READS_INSTEAD=T'
         ])
