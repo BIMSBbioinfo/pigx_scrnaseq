@@ -188,7 +188,7 @@ READ_STATISTICS = expand(os.path.join(PATH_MAPPED, "{name}", "{genome}",'{name}_
 # ----------------------------------------------------------------------------- #
 # DOWNSTREAM statistics
 # IMPORTANT - STILL NOT IMPLEMENTED
-DOWNSTREAM_STATISTICS = expand(os.path.join(PATH_MAPPED, "{name}", "{genome}",'{name}_{genome}_DownstreamStatistics.txt'), genome = REFERENCE_NAMES, name = SAMPLE_NAMES)
+DOWNSTREAM_STATISTICS = expand(os.path.join(PATH_MAPPED, "{name}", "{genome}",'{name}_{genome}_{type}_DownstreamStatistics.txt'), genome = REFERENCE_NAMES, name = SAMPLE_NAMES, type = ['exon', 'gene'])
 
 
 # ----------------------------------------------------------------------------- #
@@ -1040,10 +1040,10 @@ rule extract_downstream_statistics:
         reads_stats  = rules.extract_read_statistics.output.outfile,
         reads_cutoff = rules.find_absolute_read_cutoff.output.outfile
     output:
-        outfile = os.path.join(PATH_MAPPED, "{name}", "{genome}",'{name}_{genome}_DownstreamStatistics.txt')
+        outfile = os.path.join(PATH_MAPPED, "{name}", "{genome}",'{name}_{genome}_{type}_DownstreamStatistics.txt')
     params:
         file_location = os.path.join(PATH_MAPPED, "{name}", "{genome}"),
-        outname       = "{name}_{genome}",
+        outname       = "{name}_{genome}_{type}",
         threads       = config['execution']['rules']['extract_downstream_statistics']['threads'],
         mem           = config['execution']['rules']['extract_downstream_statistics']['memory'],
         script        = PATH_SCRIPT,
