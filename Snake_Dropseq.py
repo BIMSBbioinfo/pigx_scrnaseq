@@ -175,7 +175,7 @@ READS_MATRIX = expand(os.path.join(PATH_MAPPED, "{name}", "{genome}",'{name}_{ge
 UMI = expand(os.path.join(PATH_MAPPED, "{name}", "{genome}",'{name}_{genome}_{type}_UMI.Matrix.txt'), genome = REFERENCE_NAMES, name = SAMPLE_NAMES, type = ['exon', 'gene'])
 
 # UMI matrix in loom format
-UMI_LOOM =  expand(os.path.join(PATH_MAPPED, "{name}", "{genome}",'{name}_{genome}_{type}_UMI.Matrix.loom'), genome = REFERENCE_NAMES, name = SAMPLE_NAMES, type= ['exon', 'gene'])
+UMI_LOOM =  expand(os.path.join(PATH_MAPPED, "{name}", "{genome}",'{name}_{genome}_{type}_UMI.Matrix.loom'), genome = REFERENCE_NAMES, name = SAMPLE_NAMES, type= ['exon', 'gene', 'intron'])
 
 # Combined UMI matrices in loom format
 COMBINED_UMI_MATRICES = expand(os.path.join(PATH_MAPPED, "{genome}_UMI.loom"), genome = REFERENCE_NAMES)
@@ -1076,6 +1076,25 @@ rule convert_matrix_from_txt_to_loom:
                 output: {output.outfile}
         """
     shell: "{params.python} {PATH_SCRIPT}/convert_matrix_to_loom.py {wildcards.name} {input.infile} {input.gtf} {output.outfile} &> {log.log}"
+
+
+rule get_intron_looms:
+	input:
+		exon = os.path.join(PATH_MAPPED, "{name}", "{genome}",'{name}_{genome}_exon_UMI.Matrix.loom')
+		gene = os.path.join(PATH_MAPPED, "{name}", "{genome}",'{name}_{genome}_gene_UMI.Matrix.loom')
+	output:
+		outfile = os.path.join(PATH_MAPPED, "{name}", "{genome}",'{name}_{genome}_intron_UMI.Matrix.loom')
+	params:
+        python = SOFTWARE['python']['executable']
+    log:
+        log = os.path.join(PATH_LOG, "{name}.{genome}.get_intron_loom.log")
+    message: """
+            Get inronic .loom:
+                exon input:  {input.exon}
+                gene input:  {input.gene}
+                output: {output.outfile}
+        """
+    shell: "{params.python} {PATH_SCRIPT}/intron_loom.py {input.exon} {input.gene} {output.outfile} &> {log.log}"
 
 
 # ----------------------------------------------------------------------------- #
