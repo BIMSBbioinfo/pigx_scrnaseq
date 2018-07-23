@@ -241,32 +241,45 @@ rule combine_technical_replicates:
         import gzip
         for attr in ['reads', 'barcode']:
             out_file = str(output[attr])
-            # remove gz from out file if it's there
-            if '.gz' in out_file:
-                out_file = out_file[:-3]
-
-            for in_file in input[attr]:
-                in_file = str(in_file)
-                # determine file type of in_file
-                file_type = mg.from_file(in_file, mime=True)
-                # append content of in_file into out_file
-                if 'gzip' in file_type:
-                    with gzip.open(in_file, 'r') as file:
-                        with open(out_file, 'a+') as out:
-                            for line in file:
-                                out.write(str(line.decode('utf-8')))
-                elif genome_file_type == 'text/plain':
-                    with open(in_file, 'r') as file:
-                        with open(out_file, 'a+') as out:
-                            for line in file:
-                                out.write(str(line.decode('utf-8')))
-                else:
-                    os.sys.exit('Unknown input file format')
-                unzipped = open(out_file, 'rb').read()
-                gzf = gzip.open(out_file+'.gz', 'wb')
-                gzf.write(unzipped)
-                gzf.close()
-                os.unlink(out_file)
+            if len(input[attr]) == 1:
+            	in_file = str(input[attr][0])
+            	file_type = mg.from_file(in_file, mime=True)
+            	if 'gzip' in file_type:
+            		os.symlink(in_file, out_file)
+            	elif file_type == 'text/plain':
+            		unzipped = open(in_file, 'rb').read()
+			        gzf = gzip.open(out_file + '.gz', 'wb')
+			        gzf.write(unzipped)
+			        gzf.close()
+			        os.unlink(in_file)
+            	else:
+            		os.sys.exit('Unknown input file format')
+            else:
+            	# remove gz from out file
+		        if '.gz' in out_file:
+		            out_file = out_file[:-3]
+		        for in_file in input[attr]:
+		            in_file = str(in_file)
+		            # determine file type of in_file
+		            file_type = mg.from_file(in_file, mime=True)
+		            # append content of in_file into out_file
+		            if 'gzip' in file_type:
+		                with gzip.open(in_file, 'r') as file:
+		                    with open(out_file, 'a+') as out:
+		                        for line in file:
+		                            out.write(str(line.decode('utf-8')))
+		            elif file_type == 'text/plain':
+		                with open(in_file, 'r') as file:
+		                    with open(out_file, 'a+') as out:
+		                        for line in file:
+		                            out.write(str(line.decode('utf-8')))
+		            else:
+		                os.sys.exit('Unknown input file format')
+		        unzipped = open(out_file, 'rb').read()
+		        gzf = gzip.open(out_file + '.gz', 'wb')
+		        gzf.write(unzipped)
+		        gzf.close()
+		        os.unlink(out_file)
 
 # ----------------------------------------------------------------------------- #
 # links the primary annotation to the ./Annotation folder

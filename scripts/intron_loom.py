@@ -26,7 +26,7 @@ def create_intron_loom(path_exon, path_gene, num_chunks = 100, threshold = 1e4):
 	for i in range(2, cell_num, chunk_size):
 		j = i + chunk_size
 		if j >= cell_num:
-			j = ds_gene.shape[1]
+			j = cell_num
 		tmp = ds_gene[:,i:j] - ds_exon[:,i:j]
 		intron_umi = numpy.concatenate((intron_umi, tmp), axis = 1)
 
