@@ -1112,5 +1112,5 @@ AC_SUBST([am__tar])
 AC_SUBST([am__untar])
 ]) # _AM_PROG_TAR
 
-m4_include([m4/ax_python_module.m4])
-m4_include([m4/ax_r_package.m4])
+m4_include([pigx-common/common/m4/ax_python_module.m4])
+m4_include([pigx-common/common/m4/ax_r_package.m4])
