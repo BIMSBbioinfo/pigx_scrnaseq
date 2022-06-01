@@ -36,6 +36,9 @@ Render_Report = function(
         library(rmarkdown)
     })
 
+    # knitr 1.39 changed the default behavior.
+    options(knitr.graphics.rel_path = FALSE)
+
     if(is.null(report_file))
         stop("Missing argument: reportFile. Provide the path to .Rmd file")
 
