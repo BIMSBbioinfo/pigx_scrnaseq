@@ -142,7 +142,7 @@ loomToSingleCellExperiment = function(
   sce = loom2sce(path = loom_file)
 
   outname = str_replace(outfile,'.RDS','')
-  saveRDS(object = sce, file = paste0(outname, '.raw.RDS'))
+  base::saveRDS(object = sce, file = paste0(outname, '.raw.RDS'))
   #4.1.1 Subset the sce object, remove cells that don't exist in the metaDataFile
 
 
@@ -186,7 +186,7 @@ loomToSingleCellExperiment = function(
     "scale" = scaled_counts
   )
 
-  saveRDS(object = sce, file = paste0(outname, '.intermediate.RDS'))
+  base::saveRDS(object = sce, file = paste0(outname, '.intermediate.RDS'))
 
 
   # 4.8 Map gene ids to gene names and update rowData
@@ -197,7 +197,7 @@ loomToSingleCellExperiment = function(
   rowData(sce)$gene_name = gtf[match(rowData(sce)$gene_id, gtf$gene_id),]$gene_name
 
   #5 save SingleCellExperiment object in .RDS format
-  saveRDS(object = sce, file = outfile)
+  base::saveRDS(object = sce, file = outfile)
 
 }
 

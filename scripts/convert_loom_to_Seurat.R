@@ -53,7 +53,7 @@ convert_loom_to_seurat = function(
         seu = ScaleData(object = seu)
 
     seu@meta.data$CellID = colnames(seu)
-    saveRDS(seu, outfile)
+    base::saveRDS(seu, outfile)
 }
 
 
