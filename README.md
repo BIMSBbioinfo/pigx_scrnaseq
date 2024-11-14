@@ -345,7 +345,10 @@ The following command will install all of the dependencies to the **.guix-profil
     
     # uses guix to install all of the dependencies into a separate environment
     guix environment -l guix.scm --root=`pwd`'./run/.guix-profile'
-    
+   
+    # fetch pigx-common
+    git submodule update --init --recursive
+ 
     # sets the temporary directory - needed for storing large temporary files
     export TMPDIR=~/Tmp
     
